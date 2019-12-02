@@ -6,6 +6,7 @@ int main(int argc, char ** argv)
 {
     CONFIG * config = malloc(sizeof(CONFIG));
     getConfig(argc, argv, config);
+    showConfig(config);
     rgrep(config);
 
 

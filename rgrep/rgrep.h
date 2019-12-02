@@ -8,8 +8,10 @@
 #define TRUE 1
 #define FALSE 0
 
+#define MAX_RECORD_SIZE 1 << 15
 #define DIR_MODE 1
 #define FILE_MODE 1<<1
+#define FIELD_DEL '@'
 
 
 
@@ -26,18 +28,30 @@ typedef struct config {
     
 } CONFIG;
 
+typedef struct record {
+    char * content;
+    uint32_t content_size;
+} rec;
+
 void getConfig(int argc, char * argv[], CONFIG*);
+void showConfig(CONFIG*);
+void showUsage();
 
 // return result count
 int rgrep(const CONFIG*);
 
 // return file count
-int getDirFile(const char * , FILE ** files, const char *);
+int getDirFile(const char * , char ** files, const char *, const int8_t);
 
 // return match count
 int fileSearch(const char * fileName, const char * pattern);
 
+int fReadRec(FILE * fptr, const char * recordBegin, char ** records);
+
+int recSearch( char * record, const char * field, const char * pattern);
+
 char * strSearch(const char * target, const char * pattern);
 
+void printMatch(const char * format, const char * head, const char * detail);
 
 #endif
