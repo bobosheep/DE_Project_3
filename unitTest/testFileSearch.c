@@ -25,7 +25,7 @@ int main()
     match = fileSearch(fname, pattern2);
     match = fileSearch(fname, pattern3);
   */  
-    fname = "../../DE_Project_2/pettoday.rec";
+    fname = "../DE_Project_2/pettoday.rec";
     pattern1 = "周幼婷";
     pattern2 = "爽";
     pattern3 = "中正大學";
