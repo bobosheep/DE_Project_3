@@ -6,159 +6,6 @@
 #include "rgrep.h"
 
 
-void getConfig(int argc, char * argv[], CONFIG* config)
-{
-    int i, j, usage = 0;
-
-    config->searchPattern = NULL;
-    config->sFileName = NULL;
-    config->recordBegin = NULL;
-    config->fieldQuery = NULL;
-    config->insensitive = FALSE;
-    config->fileNameMode = FALSE;
-    config->recursive = FALSE;
-    config->multiPatternCount = 0;
-    config->multiPattern = NULL;
- 
-    for(i = 1 ; i < argc  ; i++)
-    {
-        //printf("[%d] %s\n", i, argv[i]);
-        if(strcmp("-i", argv[i]) == 0)
-        {
-            config->insensitive = TRUE;
-        }
-        else if (strcmp("-fn", argv[i]) == 0 || strcmp("--file-name", argv[i]) == 0)
-        {// search file name
-            config->fileNameMode = TRUE;
-        }
-        else if (strcmp("-r", argv[i]) == 0)
-        {// recursive mode
-            config->recursive = TRUE;
-        }
-        else if (strcmp("-rb", argv[i]) == 0 || strcmp("--record-begin", argv[i]) == 0)
-        {
-            i++;
-            config->recordBegin = malloc(strlen(argv[i]) + 1);
-            assert(config->recordBegin != NULL);
-            strcpy(config->recordBegin, argv[i]);
-        }
-        else if (strcmp("-fq", argv[i]) == 0 || strcmp("--field-query", argv[i]) == 0)
-        {
-            i++;
-            config->fieldQuery = malloc(strlen(argv[i]) + 1);
-            assert(config->fieldQuery != NULL);
-            strcpy(config->fieldQuery, argv[i]);
-        
-        }
-        else if (strcmp("-mt", argv[i]) == 0 || strcmp("--multi-pattern", argv[i]) == 0)
-        {
-            i++;
-            config->multiPatternCount = atoi(argv[i]);
-            assert(config->multiPatternCount != 0);
-            config->multiPattern = malloc(sizeof(char *) * config->multiPatternCount);
-            int mc ;
-            i++;
-            for(mc = 0 ; mc < config->multiPatternCount ; mc++, i++)
-            {
-                config->multiPattern[mc] = malloc(strlen(argv[i]) + 1);
-                assert(config->multiPattern[mc] != NULL);
-                strcpy(config->multiPattern[mc] , argv[i]);
-            }
-        }
-        else if (strcmp("-h", argv[i]) == 0)
-        {
-            usage = 1;
-        }
-        else if (strcmp("--help", argv[i]) == 0)
-        {
-            usage = 2;
-        }
-    }
-
-    if(usage)
-    {
-        showUsage(usage);
-        exit(1);
-    }
-    else if(argc < 3)
-    {
-        showUsage(2);
-        exit(1);
-    }
-
-
-
-    if(config->multiPatternCount == 0)
-    {
-        config->searchPattern = malloc(sizeof(char) * (strlen(argv[argc - 2]) + 1));
-        strcpy(config->searchPattern, argv[argc - 2]);
-    }
-
-    config->sFileName = malloc(sizeof(char) * (strlen(argv[argc - 1]) + 1));
-    strcpy(config->sFileName, argv[argc - 1]);
-
-    if(config->fieldQuery != NULL && config->recordBegin == NULL)
-    {
-        printf("[ ERROR ] You should give record begin pattern to use field query.\n");
-    }
-}
-
-void showConfig(CONFIG* config)
-{
-    printf("[ CONFIG ]\n");
-    
-    if(config->searchPattern != NULL)
-        printf("[ SEARCH PATTERN ] \"%s\"\n", config->searchPattern);
-    if(config->sFileName != NULL)
-        printf("[ FILE/DIR NAME ] \"%s\"\n", config->sFileName );
-    if(config->recordBegin != NULL)
-        printf("[ REC BEGIN PETTERN ] \"%s\"\n", config->recordBegin );
-    if(config->fieldQuery != NULL)
-        printf("[ QUERY FIELD ] \"%s\"\n", config->fieldQuery );
-
-    printf("[ INSENSITIVE ] \"%s\"\n", (config->insensitive ? "true" : "false") );
-    printf("[ NAME MODE ] \"%s\"\n", (config->fileNameMode ? "true" : "false") );
-    printf("[ RECURSIVE MODE ] \"%s\"\n", (config->recursive ? "true" : "false") );
-
-    if(config->multiPatternCount != 0)
-    {
-        printf("[ MULTIPATTERN ] \"%s\"\n", "true");
-        int i = 0;
-        for(i = 0 ; i < config->multiPatternCount ; i++)
-        {
-            printf("\"%s\" ", config->multiPattern[i]);
-        }
-        printf("\n");
-    }
-    printf("\n\n");
-}
-
-void showUsage(int isDetail)
-{
-    if(isDetail == 1)
-    {
-        printf("Usage: rgrep [OPTION]... PATTERN FILE/DIR\n");
-        printf("Search for PATTERN in a FILE, RECORDS or a DIR.\n");
-        printf("Example: rgrep -rb '@title' -fq '@body' 'hello world' news.rec\n");
-
-        printf("\nRecord relatived:\n");
-        printf("  -rb, --record-begin=PATTERN\tuse PATTERN to separate the records in the file\n");
-        printf("  -fq, --field-query=FIELD\tsearch PATTERN in the FIELD of arecord\n");
-        printf("\nDirectory relatived:\n");
-        printf("  -fn, --file-name\t\tsearch PATTERN in the name of files in directory\n");
-        printf("  -r \t\t\t\tsearch directory recursively\n");
-        printf("\nGeneral:\n");
-        printf("  -h, --help\t\t\trgrep usage\n");
-        printf("  -mt, --multi-pattern=NUM \tsearch NUM patterns and patterns should be after NUM\n");
-    }
-    else
-    {
-        /* code */
-        printf("Usage: rgrep [OPTION]... PATTERN FILE/DIR\nTry 'rgrep --help' for more information.\n");
-    }
-    
-}
-
 int rgrep(const CONFIG* config)
 {
     char * filesNameInDir[1024];
@@ -187,17 +34,22 @@ int rgrep(const CONFIG* config)
 
     else
     {
+        /* Open directory to do files search */
         if((fileCnt = getDirFile(fName, filesNameInDir, NULL, config->recursive)) > 0)
         {
+
             /* search the files in the directory */
             if(config->recordBegin != NULL)
             {
                 FILE * fptr;
                 int i, k, count;
-                char ** records = malloc(sizeof(char *) * 1000000);
+                REC * records = malloc(sizeof(REC) * 830000);
+                
+                /* Open files to do record search*/
                 for(k = 0 ; k < fileCnt ; k++)
-                {/* Open files to do record search*/
+                {
                     int c;
+                    recSearchConfig recConfig;
                     
                     /*  get records */
                     fptr = fopen(filesNameInDir[k], "r");
@@ -207,34 +59,42 @@ int rgrep(const CONFIG* config)
                     for(i = 0 ; i < count  ; i++)
                     {
                         c = 0;
+                        recConfig.record = records[i];
+                        recConfig.queryfield = config->fieldQuery;
+                        recConfig.search_config.mode = DefaultDetail;
+                        recConfig.search_config.nError = 0;
+                        
                         if(config->multiPatternCount > 0)
                         {
                             int j;
                             for(j = 0 ; j < config->multiPatternCount ; j++)
                             {
-                                c += recSearch(records[i], config->fieldQuery, config->multiPattern[j]);
+                                recConfig.search_config.pattern =  config->multiPattern[j];
+                                c += recSearch(&recConfig);
                             }
                         }
                         else
                         {
-                            c = recSearch(records[i], config->fieldQuery, config->searchPattern);
+                            recConfig.search_config.pattern =  config->searchPattern;
+                            c = recSearch(&recConfig);
                         }
                         if(c > 0)
                         {
                             printf("[ REC ] Total match: %d\n", c);
                         }
-                        free(records[i]);
-                        records[i] = NULL;
+                        free(records[i].content);
+
 
                     }
                     fclose(fptr);
-                    free(records);
                 }
+                free(records);
             }
             else 
             {
-                /* Open files to search */
                 int i, match = 0;
+
+                /* Open files to normal search */
                 for(i = 0 ; i < fileCnt ; i++)
                 {
                     if(config->multiPatternCount > 0)
@@ -253,48 +113,58 @@ int rgrep(const CONFIG* config)
                 }
             }
         }
+        /* Open file to do record search */
         else if(config->recordBegin != NULL)
         {
             FILE * fptr;
             int i, count;
             int c;
-            char ** records = malloc(sizeof(char *) * 830000);
-
-            //printf("Record Search!\n");
+            REC * records = malloc(sizeof(REC) * 830000);
+            recSearchConfig recConfig;
                 
             /*  get records */
             fptr = fopen(fName, "r");
 
             /* records pattern search */
             count = fReadRec(fptr, config->recordBegin, records);
-            printf("[ FILE %s ]rec count: %d\n", fName, count);
+            //printf("[ FILE %s ] rec count: %d\n", fName, count);
 
             for(i = 0 ; i < count  ; i++)
             {
                 c = 0;
+                recConfig.record = records[i];
+                recConfig.queryfield = config->fieldQuery;
+                recConfig.search_config.mode = DefaultDetail;
+                recConfig.search_config.nError = 0;
+
                 if(config->multiPatternCount > 0)
                 {
-                    int j;
+                    int j, tmp;
                     for(j = 0 ; j < config->multiPatternCount ; j++)
                     {
-                        c += recSearch(records[i], config->fieldQuery, config->multiPattern[j]);
+                        recConfig.search_config.pattern =  config->multiPattern[j];
+                        tmp = recSearch(&recConfig);
+                        if(tmp > 0)
+                            c += tmp;
                     }
                 }
                 else
                 {
-                    c = recSearch(records[i], config->fieldQuery, config->searchPattern);
+                    recConfig.search_config.pattern = config->searchPattern;
+                    c = recSearch(&recConfig);
                 }
                 if(c > 0)
                 {
                     printf("[ REC ABOVE ] Total match: %d\n\n", c);
                 }
-                free(records[i]);
-                records[i] = NULL;
+                free(records[i].content);
+                records[i].content_size = 0;
 
             }
             fclose(fptr);
             free(records);
         }
+        /* Open file to do file search */
         else 
         {
             if(config->multiPatternCount > 0)
@@ -302,7 +172,7 @@ int rgrep(const CONFIG* config)
                 int i, c;
                 for(i = 0 ; i < config->multiPatternCount ; i++)
                 {
-                    c = fileSearch(config->sFileName, config->searchPattern);
+                    c = fileSearch(config->sFileName, config->multiPattern[i]);
                     if(c != -1)
                         matchCount += c;
                     else 
@@ -362,11 +232,19 @@ int getDirFile(const char * dirName, char ** files, const char * pattern, const 
             {
                 char filename[FILENAME_MAX];
                 int len = strlen(dirName);
+                sConfig search_config;
+
+                search_config.mode = DefaultSearch;
+                search_config.pattern = pattern;
+                search_config.target = filename;
+                search_config.nError = 0;
+
                 if(dirName[len - 1] == '/')
                     sprintf(filename, "%s%s", dirName, dent->d_name);
                 else
                     sprintf(filename, "%s/%s", dirName, dent->d_name);
-                if(pattern != NULL && strSearch(filename, pattern) != NULL)
+
+                if(pattern != NULL && strSearch(&search_config) != NULL)
                 {
                     matchCount++;
                     printf(filename);
@@ -423,49 +301,40 @@ int fileSearch(const char * fileName, const char * pattern)
     int match_count = 0;
     int line = 0;
 
+    //printf("[ FILE SEARCH ]\n[ file ] %s\n[ pattern ] %s\n", fileName, pattern);
     if(fileName == NULL || pattern == NULL)
         return -1;
 
-    buf = malloc(sizeof(char) * BUF_SIZE);
+    buf = malloc(sizeof(char) * BUF_SIZE + 1);
 
-    printf("[ FILE SEARCH ]\n[ file ] %s\n[ pattern ] %s\n", fileName, pattern);
 
     while(fgets(buf, BUF_SIZE, fptr))
     {
         char * ptr = buf;
-        char * ptrEnd = buf + strlen(buf) - 1;
         int patternLen = strlen(pattern);
-        while((ptr = strSearch(ptr, pattern)) != NULL)
-        {
-            char * foundPattern = NULL;
-            char breakPoint;
-            int isBroken = 0;
-            char head[128];
-            char detail[1 << 12];
-            if(foundPattern != buf)
-            {
-                sprintf(head, "[ MATCH : %s][ FILE:\"%s\" %d:%d ]", pattern, fileName, line, ptr - buf);
-                sprintf(detail, "%s", buf);
-                //printf("[ MATCH: %s ][ FILE:\"%s\" %d:%d ]: ...%s", pattern, fileName, line, ptr - buf, foundPattern);    
-                //if(isBroken)
-                //    printf("...\n");
-            }
-            else
-            {
-                sprintf(head, "[ MATCH : %s][ FILE:\"%s\" %d:%d ]", pattern, fileName, line, ptr - buf);
-                sprintf(detail, "%s", buf);
-                //printf("[ MATCH: %s ][ FILE:\"%s\" %d:%d ]: %s", pattern, fileName, line, ptr - buf, foundPattern);    
-                //if(isBroken)
-                //    printf("...\n");
-            }
+        char head[128];
+        char detail[BUF_SIZE + 1];
+        sConfig search_config;
 
+        search_config.mode = DefaultSearch;
+        search_config.target = ptr;
+        search_config.pattern = pattern;
+        search_config.nError = 0;
+
+        while((ptr = strSearch(&search_config)) != NULL)
+        {
+            char * foundPattern = ptr;
+            char breakPoint;
+            
+            memset(head, '\0', 128);
+            memset(detail, '\0', 1 << 15);
+            sprintf(head, "[ MATCH : %s][ FILE:\"%s\" %d:%d ]", pattern, fileName, line, ptr - buf);
+            sprintf(detail, "%s", buf);
+               
             printMatch(NULL, head, detail);
             
-            if(isBroken)
-            {
-                *(ptr + patternLen + 20) = breakPoint;
-            }
             ptr += patternLen;
+            search_config.target = ptr;
             match_count++;
             //if(line == 10000)
                //printf("match count: %d\n", match_count);
@@ -473,147 +342,12 @@ int fileSearch(const char * fileName, const char * pattern)
         line++;
     }
     fclose(fptr);
+    free(buf);
 
     return match_count;
 }
 
-int fReadRec(FILE * fptr, const char * recordBegin, char ** records)
-{
-    const int MAX_RECSIZE = 1 << 17;
-    int status = 1;
-    char * buffer = malloc(sizeof(char) * MAX_RECSIZE);
-    int nread, recLen, recordCount = 0;
-    int patternLen;
 
-
-    if(feof(fptr))
-    {
-        status = -1;
-        goto exit;
-    }
-    if(records == NULL)
-    {
-        status = -1;
-        goto exit;
-    }
-
-
-    patternLen = strlen(recordBegin);
-    while((nread = fread(buffer, 1, MAX_RECSIZE -1 , fptr)))
-    {
-        buffer[nread] = '\0';
-
-        char *cur, *next;
-        
-
-        next = strstr(buffer, recordBegin);
-
-        while(next)
-        {
-            cur = next;
-            next = strstr(cur + patternLen, recordBegin);
-
-            if(next)
-                recLen = next - cur;
-                
-            else
-            {
-                recLen = (buffer + nread) - cur;
-                if(nread >= MAX_RECSIZE - 1)
-                {
-                    //printf("fseek!\n");
-                    fseek(fptr, -recLen-50, SEEK_CUR);
-                    break;
-                } 
-            }
-            
-            /*  Get a record  */
-            if(records[recordCount] == NULL)
-            {
-                records[recordCount] = malloc(sizeof(char) * recLen + 1);
-                assert(records[recordCount] != NULL);
-            }
-            memcpy(records[recordCount], cur, recLen);
-            records[recordCount][recLen] = '\0';
-            //printf("[REC]\n%s", record);
-
-            recordCount++;
-            //if(recordCount % 5000 == 0)
-                //printf("%d\n", recordCount);
-        }
-
-    }
-
-exit:    
-    free(buffer);
-    return status == -1 ? -1 : recordCount;
-  
-        
-}
-
-int recSearch(char * rec, const char * field, const char * pattern)
-{
-    int matchCount = 0;
-    int patternLen = strlen(pattern);
-
-    char head[128];
-    if(rec == NULL)
-        return -1;
-
-    if(field != NULL)
-    {
-        /*  Field search    */
-        char * fieldPart = strstr(rec, field);
-        if(!fieldPart)
-        {
-            return -1;
-        }
-        //printf("[FIELD] %s\n", fieldPart);
-        char * fieldEnd = fieldPart + 1;
-        while((*fieldEnd) != FIELD_DEL && (*fieldEnd) != '\0') fieldEnd++;
-        *fieldEnd = '\0';
-
-        char * findPattern = fieldPart ;
-        char * detail = malloc(sizeof(char) * (strlen(fieldPart) + strlen(rec) * 1.5));
-        if((findPattern = strSearch(findPattern, pattern)) != NULL)
-        {
-            matchCount++;
-            sprintf(head, "[ MATCH : %s][ REC ][ FIELD: %s ]", pattern, field);
-            sprintf(detail, "%s\n[REC Detail]:\n", fieldPart);
-            *fieldEnd = FIELD_DEL;
-            strcat(detail, rec);
-            
-            printMatch(NULL, head, detail);
-            findPattern = findPattern + patternLen;
-        }
-        
-        *fieldEnd = FIELD_DEL;
-
-    }
-    else
-    {
-        /*  Record search   */
-        char * ptr = rec;
-        while((ptr = strSearch(ptr, pattern)) != NULL)
-        {
-            matchCount++;
-            ptr = ptr + patternLen;
-        }
-        if(matchCount > 0)
-        {
-            sprintf(head, "[ MATCH : %s][ REC ]", pattern);
-            printMatch(NULL, head, rec);
-        }
-    }
-
-    return matchCount;
-    
-}
-
-char * strSearch(const char * str, const char * pattern)
-{
-    return strstr(str, pattern);
-}
 
 void printMatch(const char * format, const char * head, const char * detail)
 {
@@ -621,7 +355,8 @@ void printMatch(const char * format, const char * head, const char * detail)
     {
         if(head != NULL && detail != NULL)
         {
-            printf("%s :\n%s\n", head, detail);
+            printf("%s\n", detail);
+            //printf("%s :\n%s\n", head, detail);
         }
     }
     else
