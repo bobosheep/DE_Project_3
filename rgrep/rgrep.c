@@ -5,7 +5,6 @@
 #include <dirent.h>
 #include "rgrep.h"
 
-
 int rgrep(const CONFIG* config)
 {
     char * filesNameInDir[1024];
@@ -52,7 +51,7 @@ int rgrep(const CONFIG* config)
                     recSearchConfig recConfig;
                     
                     /*  get records */
-                    fptr = fopen(filesNameInDir[k], "r");
+                    fptr = fopen(filesNameInDir[k], "rb");
 
                     /* records pattern search */
                     count = fReadRec(fptr, config->recordBegin, records);
@@ -123,7 +122,7 @@ int rgrep(const CONFIG* config)
             recSearchConfig recConfig;
                 
             /*  get records */
-            fptr = fopen(fName, "r");
+            fptr = fopen(fName, "rb");
 
             /* records pattern search */
             count = fReadRec(fptr, config->recordBegin, records);
@@ -296,7 +295,7 @@ int fileSearch(const char * fileName, const char * pattern)
 {
     const int BUF_SIZE = 1 << 16;
 
-    FILE * fptr = fopen(fileName, "r");
+    FILE * fptr = fopen(fileName, "rb");
     char * buf;
     int match_count = 0;
     int line = 0;
@@ -322,16 +321,9 @@ int fileSearch(const char * fileName, const char * pattern)
         search_config.nError = 0;
 
         while((ptr = strSearch(&search_config)) != NULL)
-        {
-            char * foundPattern = ptr;
-            char breakPoint;
-            
-            memset(head, '\0', 128);
-            memset(detail, '\0', 1 << 15);
-            sprintf(head, "[ MATCH : %s][ FILE:\"%s\" %d:%d ]", pattern, fileName, line, ptr - buf);
-            sprintf(detail, "%s", buf);
-               
-            printMatch(NULL, head, detail);
+        {            
+            //memset(head, '\0', 128);
+            //memset(detail, '\0', 1 << 15);
             
             ptr += patternLen;
             search_config.target = ptr;
@@ -339,6 +331,10 @@ int fileSearch(const char * fileName, const char * pattern)
             //if(line == 10000)
                //printf("match count: %d\n", match_count);
         }
+        //sprintf(head, "[ MATCH : %s][ FILE:\"%s\" %d:%d ]", pattern, fileName, line, ptr - buf);
+        // sprintf(detail, "%s", buf);
+        if(match_count > 0)
+            printMatch(NULL, head, buf);
         line++;
     }
     fclose(fptr);

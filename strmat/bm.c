@@ -23,12 +23,20 @@ char * BM_exec(const char * target, const char * pattern, int * shiftV)
 {
     const unsigned char * ptrEnd = (const unsigned char *)target + strlen(target);
     int plen = strlen(pattern);
-    const unsigned char * ptr = (const unsigned char *)target + plen - 1;
+    const unsigned char * ptr = target + plen - 1;
     const unsigned char lastChar = *(pattern + plen - 1);
     int shiftv;
 
     //printf("plen: %d\n", plen);
     //printf("start ptr: %s\n", ptr);
+    /*
+    ptr = strchr(target, lastChar);
+    if (!ptr) // First character of needle is not in the haystack.
+        return NULL;
+    if(memcmp(ptr - plen + 1, pattern , plen) == 0)
+        return ptr - plen + 1;
+    else ptr += shiftV[*ptr];
+    */
     while(ptr < ptrEnd)
     {
         while(ptr < ptrEnd && *ptr != lastChar ) 
@@ -39,7 +47,7 @@ char * BM_exec(const char * target, const char * pattern, int * shiftV)
         }
         
         //printf("match last word: %s\n", ptr - plen + 1);
-        if(strncmp(ptr - plen + 1, pattern , plen) == 0)
+        if(memcmp(ptr - plen + 1, pattern , plen) == 0)
             return ptr - plen + 1;
         else ptr += shiftV[*ptr];
     }

@@ -44,7 +44,7 @@ int fReadRec(FILE * fptr, const char * recordBegin, REC * records)
                 if(nread >= MAX_RECSIZE - 1)
                 {
                     //printf("fseek!\n");
-                    fseek(fptr, -recLen-64, SEEK_CUR);
+                    fseek(fptr, -recLen, SEEK_CUR);
                     break;
                 } 
             }
@@ -53,11 +53,12 @@ int fReadRec(FILE * fptr, const char * recordBegin, REC * records)
             if(records[recordCount].content == NULL)
             {
                 records[recordCount].content = malloc(sizeof(char) * recLen + 1);
+                //printf("recLen: %d\n", recLen);
                 assert(records[recordCount].content != NULL);
             }
             memcpy(records[recordCount].content , cur, recLen);
             records[recordCount].content[recLen] = '\0';
-            records[recordCount].content_size = recLen + 1;
+            records[recordCount].content_size = recLen;
             //if(recordCount > 155000)
                 //printf("[ REC %d ]\n%s", recordCount, records[recordCount].content);
 
@@ -107,22 +108,22 @@ int recSearch(const recSearchConfig * rec_s_config)
         *fieldEnd = '\0';
 
         char * findPattern = fieldPart ;
-        char * detail = malloc(sizeof(char) * (strlen(fieldPart) + strlen(rec.content) * 1.5));
         search_config.target = findPattern;
-        if((findPattern = strSearch(&search_config)) != NULL)
+        while((findPattern = strSearch(&search_config)) != NULL)
         {
             matchCount++;
-            sprintf(head, "[ MATCH : %s][ REC ][ FIELD: %s ]", search_config.pattern, field);
-            sprintf(detail, "%s\n[ REC Detail ]:\n", fieldPart);
+            //sprintf(head, "[ MATCH : %s][ REC ][ FIELD: %s ]", search_config.pattern, field);
+            //sprintf(detail, "%s\n[ REC Detail ]:\n", fieldPart);
             *fieldEnd = FIELD_DEL;
-            strcat(detail, rec.content);
             
-            printMatch(NULL, head, detail);
+            printMatch(NULL, head, rec.content);
             findPattern = findPattern + patternLen;
+            search_config.target = findPattern;
+            *fieldEnd = '\0';
+
         }
         
         *fieldEnd = FIELD_DEL;
-        free(detail);
 
     }
     else
